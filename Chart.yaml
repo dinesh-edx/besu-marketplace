@@ -1,0 +1,18 @@
+apiVersion: v2
+name: besu-marketplace
+version: 1.0.0
+description: Hyperledger Besu AWS Marketplace Deployment
+appVersion: "25.3.0"
+type: application
+keywords:
+  - blockchain
+  - edexa
+  - bussiness-blockchain
+  - besu
+  - aws
+  - marketplace
+home: https://edexa.network/
+sources:
+  - https://github.com/hyperledger/besu
+maintainers:
+  - name: edeXa

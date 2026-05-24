@@ -1,0 +1,288 @@
+{{- range .Values.validatorsList }}
+
+apiVersion: apps/v1
+kind: StatefulSet
+
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Release.Namespace }}
+
+  labels:
+    app: {{ .name }}
+    app.kubernetes.io/name: besu
+    app.kubernetes.io/component: validator
+    app.kubernetes.io/managed-by: Helm
+
+spec:
+  serviceName: {{ .name }}
+
+  replicas: {{ $.Values.validators.replicaCount }}
+
+  podManagementPolicy: Parallel
+
+  revisionHistoryLimit: 3
+
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+
+  selector:
+    matchLabels:
+      app: {{ .name }}
+
+  template:
+    metadata:
+      labels:
+        app: {{ .name }}
+        app.kubernetes.io/name: besu
+        app.kubernetes.io/component: validator
+
+        {{- with $.Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+
+      annotations:
+
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $ | sha256sum }}
+
+        {{- if $.Values.monitoring.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9545"
+        {{- end }}
+
+        {{- with $.Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+
+    spec:
+
+      terminationGracePeriodSeconds: {{ $.Values.validators.terminationGracePeriodSeconds }}
+
+      {{- if $.Values.validators.priorityClassName }}
+      priorityClassName: {{ $.Values.validators.priorityClassName }}
+      {{- end }}
+
+      securityContext:
+        {{- toYaml $.Values.securityContext | nindent 8 }}
+
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/component
+                    operator: In
+                    values:
+                      - validator
+              topologyKey: kubernetes.io/hostname
+
+      {{- if $.Values.validators.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: validator
+      {{- end }}
+
+      {{- with $.Values.validators.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with $.Values.validators.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      containers:
+        - name: besu
+
+          image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+
+          securityContext:
+            {{- toYaml $.Values.containerSecurityContext | nindent 12 }}
+
+          resources:
+            requests:
+              memory: "{{ $.Values.resources.validator.requests.memory }}"
+              cpu: "{{ $.Values.resources.validator.requests.cpu }}"
+
+            limits:
+              memory: "{{ $.Values.resources.validator.limits.memory }}"
+              cpu: "{{ $.Values.resources.validator.limits.cpu }}"
+
+          args:
+            - "--config-file=/etc/besu/config.toml"
+
+            - "--Xdns-enabled=true"
+            - "--Xdns-update-enabled=true"
+
+            - "--version-compatibility-protection=false"
+
+          ports:
+            - containerPort: 30303
+              name: discovery
+              protocol: UDP
+
+            - containerPort: 30303
+              name: rlpx
+              protocol: TCP
+
+            {{- if $.Values.validators.rpcEnabled }}
+            - containerPort: 8545
+              name: rpc-http
+              protocol: TCP
+
+            - containerPort: 8546
+              name: rpc-ws
+              protocol: TCP
+
+            - containerPort: 8547
+              name: graphql
+              protocol: TCP
+            {{- end }}
+
+            {{- if $.Values.monitoring.enabled }}
+            - containerPort: 9545
+              name: metrics
+              protocol: TCP
+            {{- end }}
+
+          startupProbe:
+            tcpSocket:
+              port: 30303
+            failureThreshold: 30
+            periodSeconds: 10
+
+          readinessProbe:
+            tcpSocket:
+              port: 30303
+            initialDelaySeconds: 60
+            periodSeconds: 10
+
+          livenessProbe:
+            tcpSocket:
+              port: 30303
+            initialDelaySeconds: 120
+            periodSeconds: 20
+
+          volumeMounts:
+            - mountPath: /secrets
+              name: keys
+              readOnly: true
+
+            - mountPath: /etc/genesis
+              name: genesis
+              readOnly: true
+
+            - mountPath: /etc/besu/static-nodes.json
+              name: static-nodes
+              readOnly: true
+              subPath: static-nodes.json
+
+            - mountPath: /etc/besu/config.toml
+              name: members
+              readOnly: true
+              subPath: config.toml
+
+            - mountPath: /data
+              name: besu-data
+
+      volumes:
+        - name: genesis
+          configMap:
+            name: besu-genesis-configmap
+
+        - name: static-nodes
+          configMap:
+            name: besu-static-nodes-json-configmap
+
+        - name: members
+          configMap:
+            name: besu-validators-config-toml-configmap
+
+        - name: keys
+          secret:
+            secretName: besu-network-secret
+            items:
+              - key: {{ .key }}
+                path: validator.key
+
+  {{- if $.Values.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: besu-data
+
+      spec:
+        accessModes:
+          {{- toYaml $.Values.persistence.accessModes | nindent 10 }}
+
+        storageClassName: {{ $.Values.storage.className }}
+
+        resources:
+          requests:
+            storage: {{ $.Values.storage.size }}
+  {{- end }}
+
+---
+
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Release.Namespace }}
+
+  labels:
+    app: {{ .name }}
+    app.kubernetes.io/name: besu
+    app.kubernetes.io/component: validator
+    besu-metrics: "true"
+
+spec:
+  type: {{ $.Values.service.type }}
+
+  selector:
+    app: {{ .name }}
+
+  ports:
+    - name: discovery
+      port: 30303
+      protocol: UDP
+      targetPort: 30303
+
+    - name: rlpx
+      port: 30303
+      protocol: TCP
+      targetPort: 30303
+
+  {{- if $.Values.validators.rpcEnabled }}
+    - name: rpc-http
+      port: 8545
+      protocol: TCP
+      targetPort: 8545
+
+    - name: rpc-ws
+      port: 8546
+      protocol: TCP
+      targetPort: 8546
+
+    - name: graphql
+      port: 8547
+      protocol: TCP
+      targetPort: 8547
+  {{- end }}
+
+  {{- if $.Values.monitoring.enabled }}
+    - name: metrics
+      port: 9545
+      protocol: TCP
+      targetPort: 9545
+  {{- end }}
+
+---
+{{- end }}
