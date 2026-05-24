@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: besu-genesis-configmap
+  namespace: {{ .Release.Namespace }}
+
+data:
+  genesis.json: |
+{{ .Files.Get "files/genesis.json" | indent 4 }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: besu-static-nodes-json-configmap
+  namespace: {{ .Release.Namespace }}
+
+data:
+  static-nodes.json: |
+{{ .Files.Get "files/static-nodes.json" | indent 4 }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: besu-validators-config-toml-configmap
+  namespace: {{ .Release.Namespace }}
+
+data:
+  config.toml: |
+{{ .Files.Get "files/config.toml" | indent 4 }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: besu-rpc-config-toml-configmap
+  namespace: {{ .Release.Namespace }}
+
+data:
+  config.toml: |
+{{ .Files.Get "files/config.toml" | indent 4 }}

@@ -1,0 +1,25 @@
+{
+    "config": {
+    "chainId": 5424,
+    "shanghaiTime": 0,
+    "qbft": {
+        "blockperiodseconds": 5,
+        "epochlength": 30000,
+        "requesttimeoutseconds": 10,
+        "miningbeneficiary" : "0x6DBFFdeFD5161252aF5109D79dA3D12C9E3E6309"
+    }
+    },
+    "nonce": "0x0",
+    "timestamp": "0x67C03837",
+    "gasLimit": "0x1C9C380",
+    "difficulty": "0x1",
+    "mixHash": "0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365",
+    "coinbase": "0x0000000000000000000000000000000000000000",
+    "alloc": {
+    "0x56a380Bc7BFFc1319022f603aBcc4BDAD87b00D4": {
+        "comment" : "edeXa Treasury Account",
+        "balance": "10000000000000000000000000000"
+    }
+    },
+    "extraData": "0xf87aa00000000000000000000000000000000000000000000000000000000000000000f85494137bd92ef0f1f0fff8f948ccf1db24aedaf7c2c294c05c57fa9938b02623021d9d1d7e71fffef101bc948bc8ad610a5c41b9daaa39cceac01b7eded13ec294e68c3f23eccc38c99c3d7c1cfeaedfbe16554f61c080c0"
+}

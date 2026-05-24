@@ -1,0 +1,7 @@
+[
+  "enode://BOOTNODE_PUBLIC_KEY@bootnode:30303",
+  "enode://VALIDATOR1_PUBLIC_KEY@validator1:30303",
+  "enode://VALIDATOR2_PUBLIC_KEY@validator2:30303",
+  "enode://VALIDATOR3_PUBLIC_KEY@validator3:30303",
+  "enode://VALIDATOR4_PUBLIC_KEY@validator4:30303"
+]

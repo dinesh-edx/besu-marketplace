@@ -6,7 +6,8 @@ metadata:
   namespace: {{ .Release.Namespace }}
 
   labels:
-    {{- include "besu.validatorLabels" . | nindent 4 }}
+    {{- include "besu-marketplace.labels" . | nindent 4 }}
+    app.kubernetes.io/component: validator
 
 spec:
   minAvailable: {{ .Values.validators.pdb.minAvailable }}
