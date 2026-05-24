@@ -1,78 +1,67 @@
 {{/*
-Expand the name of the chart.
+Expand the chart name.
 */}}
-{{- define "besu.name" -}}
+{{- define "besu-marketplace.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
-Create a default fully qualified app name.
+Create fully qualified app name.
 */}}
-{{- define "besu.fullname" -}}
+{{- define "besu-marketplace.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
 {{- $name := default .Chart.Name .Values.nameOverride }}
-{{- if contains $name .Release.Name }}
-{{- .Release.Name | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
-{{- end }}
+{{- printf "%s" $name | trunc 63 | trimSuffix "-" }}
 {{- end }}
 {{- end }}
 
 {{/*
-Chart name and version.
+Common Labels
 */}}
-{{- define "besu.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
-{{- end }}
-
-{{/*
-Common labels.
-*/}}
-{{- define "besu.labels" -}}
-helm.sh/chart: {{ include "besu.chart" . }}
-app.kubernetes.io/name: {{ include "besu.name" . }}
+{{- define "besu-marketplace.labels" -}}
+helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+app.kubernetes.io/name: {{ include "besu-marketplace.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
-app.kubernetes.io/version: {{ .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
-Selector labels.
+Selector Labels
 */}}
-{{- define "besu.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "besu.name" . }}
+{{- define "besu-marketplace.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "besu-marketplace.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Validator labels.
-*/}}
-{{- define "besu.validatorLabels" -}}
-{{ include "besu.labels" . }}
-app.kubernetes.io/component: validator
-{{- end }}
-
-{{/*
-RPC labels.
+RPC Labels
 */}}
 {{- define "besu.rpcLabels" -}}
-{{ include "besu.labels" . }}
+{{ include "besu-marketplace.labels" . }}
 app.kubernetes.io/component: rpc
 {{- end }}
 
 {{/*
-Bootnode labels.
+Validator Labels
+*/}}
+{{- define "besu.validatorLabels" -}}
+{{ include "besu-marketplace.labels" . }}
+app.kubernetes.io/component: validator
+{{- end }}
+
+{{/*
+Bootnode Labels
 */}}
 {{- define "besu.bootnodeLabels" -}}
-{{ include "besu.labels" . }}
+{{ include "besu-marketplace.labels" . }}
 app.kubernetes.io/component: bootnode
 {{- end }}
 
 {{/*
-Prometheus annotations.
+Prometheus annotations
 */}}
 {{- define "besu.prometheusAnnotations" -}}
 prometheus.io/scrape: "true"
@@ -80,37 +69,59 @@ prometheus.io/port: "9545"
 {{- end }}
 
 {{/*
-Storage class helper.
+Config checksum
+Triggers rolling restart on configmap update
+*/}}
+{{- define "besu.configChecksum" -}}
+{{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+{{- end }}
+
+{{/*
+Storage class helper
 */}}
 {{- define "besu.storageClass" -}}
 {{- if .Values.storage.className }}
-{{- .Values.storage.className }}
+{{ .Values.storage.className }}
 {{- else }}
 gp3
 {{- end }}
 {{- end }}
 
 {{/*
-Image helper.
+Image helper
 */}}
 {{- define "besu.image" -}}
 {{ .Values.image.repository }}:{{ .Values.image.tag }}
 {{- end }}
 
 {{/*
-ServiceAccount name.
+Service Account Name
 */}}
-{{- define "besu.serviceAccountName" -}}
+{{- define "besu-marketplace.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "besu.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "besu-marketplace.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
 
 {{/*
-Config checksum helper.
+Validator selector labels
 */}}
-{{- define "besu.configChecksum" -}}
-{{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+{{- define "besu.validatorSelectorLabels" -}}
+app.kubernetes.io/component: validator
+{{- end }}
+
+{{/*
+RPC selector labels
+*/}}
+{{- define "besu.rpcSelectorLabels" -}}
+app.kubernetes.io/component: rpc
+{{- end }}
+
+{{/*
+Bootnode selector labels
+*/}}
+{{- define "besu.bootnodeSelectorLabels" -}}
+app.kubernetes.io/component: bootnode
 {{- end }}
