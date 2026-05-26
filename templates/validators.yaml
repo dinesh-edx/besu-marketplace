@@ -13,6 +13,14 @@ metadata:
     app.kubernetes.io/name: besu
     app.kubernetes.io/component: validator
     app.kubernetes.io/managed-by: Helm
+    {{- with $.Values.commonLabels }}
+    {{ toYaml . | nindent 4 }}
+    {{- end }}
+
+  {{- with $.Values.commonAnnotations }}
+  annotations:
+    {{ toYaml . | nindent 4 }}
+  {{- end }}
 
 spec:
   serviceName: {{ .name }}
@@ -38,19 +46,51 @@ spec:
         app.kubernetes.io/name: besu
         app.kubernetes.io/component: validator
 
+        {{- with $.Values.podLabels }}
+        {{ toYaml . | nindent 8 }}
+        {{- end }}
+
       annotations:
+        {{- if $.Values.validators.metrics.enabled }}
         prometheus.io/scrape: "true"
-        prometheus.io/port: "9545"
+        prometheus.io/port: "{{ $.Values.validators.metrics.port }}"
+        {{- end }}
+
+        {{- with $.Values.podAnnotations }}
+        {{ toYaml . | nindent 8 }}
+        {{- end }}
 
     spec:
 
       terminationGracePeriodSeconds: {{ $.Values.validators.terminationGracePeriodSeconds }}
 
+      {{- if $.Values.validators.priorityClassName }}
+      priorityClassName: {{ $.Values.validators.priorityClassName }}
+      {{- end }}
+
       securityContext:
         fsGroup: {{ $.Values.securityContext.fsGroup }}
 
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{ toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with $.Values.validators.nodeSelector }}
+      nodeSelector:
+        {{ toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with $.Values.validators.tolerations }}
+      tolerations:
+        {{ toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- if $.Values.validators.antiAffinity.enabled }}
       affinity:
         podAntiAffinity:
+
+          {{- if eq $.Values.validators.antiAffinity.type "required" }}
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
                 matchExpressions:
@@ -60,11 +100,30 @@ spec:
                       - validator
               topologyKey: kubernetes.io/hostname
 
-      {{- if $.Values.validators.topologySpreadConstraints }}
+          {{- else }}
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app.kubernetes.io/component
+                      operator: In
+                      values:
+                        - validator
+                topologyKey: kubernetes.io/hostname
+          {{- end }}
+
+      {{- else if $.Values.validators.affinity }}
+      affinity:
+        {{ toYaml $.Values.validators.affinity | nindent 8 }}
+      {{- end }}
+
+      {{- if $.Values.validators.topologySpreadConstraints.enabled }}
       topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: topology.kubernetes.io/zone
-          whenUnsatisfiable: DoNotSchedule
+        - maxSkew: {{ $.Values.validators.topologySpreadConstraints.maxSkew }}
+          topologyKey: {{ $.Values.validators.topologySpreadConstraints.topologyKey }}
+          whenUnsatisfiable: {{ $.Values.validators.topologySpreadConstraints.whenUnsatisfiable }}
+
           labelSelector:
             matchLabels:
               app.kubernetes.io/component: validator
@@ -81,6 +140,10 @@ spec:
             runAsUser: {{ $.Values.containerSecurityContext.runAsUser }}
             runAsGroup: {{ $.Values.containerSecurityContext.runAsGroup }}
             allowPrivilegeEscalation: {{ $.Values.containerSecurityContext.allowPrivilegeEscalation }}
+            readOnlyRootFilesystem: {{ $.Values.containerSecurityContext.readOnlyRootFilesystem }}
+
+            capabilities:
+              {{ toYaml $.Values.containerSecurityContext.capabilities | nindent 14 }}
 
           resources:
             requests:
@@ -99,13 +162,17 @@ spec:
             - "--Xdns-enabled=true"
             - "--Xdns-update-enabled=true"
 
-            - "--metrics-enabled=true"
+            - "--metrics-enabled={{ $.Values.validators.metrics.enabled }}"
             - "--metrics-host=0.0.0.0"
-            - "--metrics-port=9545"
+            - "--metrics-port={{ $.Values.validators.metrics.port }}"
 
             - "--host-allowlist=*"
 
             - "--version-compatibility-protection=false"
+
+            {{- if and $.Values.validators.bootnode.enabled (eq .name $.Values.validators.bootnode.validator) }}
+            - "--nat-method=NONE"
+            {{- end }}
 
           ports:
             - containerPort: 30303
@@ -116,27 +183,38 @@ spec:
               name: rlpx
               protocol: TCP
 
-            - containerPort: 9545
+            {{- if $.Values.validators.metrics.enabled }}
+            - containerPort: {{ $.Values.validators.metrics.port }}
               name: metrics
               protocol: TCP
+            {{- end }}
 
+          {{- if $.Values.validators.probes.startup.enabled }}
           startupProbe:
             tcpSocket:
               port: 30303
-            failureThreshold: 30
-            periodSeconds: 10
 
+            failureThreshold: {{ $.Values.validators.probes.startup.failureThreshold }}
+            periodSeconds: {{ $.Values.validators.probes.startup.periodSeconds }}
+          {{- end }}
+
+          {{- if $.Values.validators.probes.readiness.enabled }}
           readinessProbe:
             tcpSocket:
               port: 30303
-            initialDelaySeconds: 60
-            periodSeconds: 10
 
+            initialDelaySeconds: {{ $.Values.validators.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ $.Values.validators.probes.readiness.periodSeconds }}
+          {{- end }}
+
+          {{- if $.Values.validators.probes.liveness.enabled }}
           livenessProbe:
             tcpSocket:
               port: 30303
-            initialDelaySeconds: 120
-            periodSeconds: 20
+
+            initialDelaySeconds: {{ $.Values.validators.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ $.Values.validators.probes.liveness.periodSeconds }}
+          {{- end }}
 
           volumeMounts:
             - mountPath: /secrets
@@ -160,6 +238,15 @@ spec:
             - mountPath: /data
               name: besu-data
 
+            {{- with $.Values.extraVolumeMounts }}
+            {{ toYaml . | nindent 12 }}
+            {{- end }}
+
+          env:
+            {{- with $.Values.extraEnv }}
+            {{ toYaml . | nindent 12 }}
+            {{- end }}
+
       volumes:
         - name: genesis
           configMap:
@@ -180,13 +267,17 @@ spec:
               - key: {{ .key }}
                 path: validator.key
 
+        {{- with $.Values.extraVolumes }}
+        {{ toYaml . | nindent 8 }}
+        {{- end }}
+
   volumeClaimTemplates:
     - metadata:
         name: besu-data
 
       spec:
         accessModes:
-          - ReadWriteOnce
+          {{- toYaml $.Values.persistence.accessModes | nindent 10 }}
 
         storageClassName: {{ $.Values.storage.className }}
 
@@ -208,7 +299,10 @@ metadata:
     app.kubernetes.io/component: validator
 
 spec:
+
+  {{- if $.Values.validators.service.headless }}
   clusterIP: None
+  {{- end }}
 
   type: {{ $.Values.service.type }}
 
@@ -226,9 +320,11 @@ spec:
       protocol: TCP
       targetPort: 30303
 
+    {{- if $.Values.validators.metrics.enabled }}
     - name: metrics
-      port: 9545
+      port: {{ $.Values.validators.metrics.port }}
       protocol: TCP
-      targetPort: 9545
+      targetPort: {{ $.Values.validators.metrics.port }}
+    {{- end }}
 
 {{- end }}

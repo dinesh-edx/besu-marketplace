@@ -1,7 +1,6 @@
 [
-  "enode://BOOTNODE_PUBLIC_KEY@bootnode:30303",
-  "enode://VALIDATOR1_PUBLIC_KEY@validator1:30303",
-  "enode://VALIDATOR2_PUBLIC_KEY@validator2:30303",
-  "enode://VALIDATOR3_PUBLIC_KEY@validator3:30303",
-  "enode://VALIDATOR4_PUBLIC_KEY@validator4:30303"
+  "enode://f61e653ecfb9a99fc10038380f5ee80e8d59a6d062449777478ac196888246d9142bf6b4465a1c3bc00da99614fbfb584b7ebe88e33e5a3e0e0af94c90e0e1bc@validator1:30303",
+  "enode://d3fdeacc6c60d3bc4c37ab93fafe2218f670688ed467942d1b72d0178133eba21a9ec9b4b0d06c8e32157101151eac5f671fbb7c0dbad0d6b04a0356380dc108@validator2:30303",
+  "enode://bd370487dac1f2b82453f27f9cb0d92df53c2b242b099ab2bb4baf587e6f7c5222a92f5059bdd0c7bbfacdb9770f9cae374420a1a81905d93ab0b3947bad12fe@validator3:30303",
+  "enode://8b582f034b4ac16ca8803cfba135ac50b3159cf0b69f12d248aebb8f14b43b70a87d2cf744aa318b66ef85a60ebc8bd09b5f998f4437ecec72bc857a80177804@validator4:30303"
 ]
