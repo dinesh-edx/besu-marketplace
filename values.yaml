@@ -8,10 +8,10 @@ fullnameOverride: ""
 
 storage:
   # For EKS Production
-  className: gp3
+  #className: gp3
 
   # For Local/K3s Testing
-  # className: local-path
+  className: standard
 
   size: 50Gi
 
