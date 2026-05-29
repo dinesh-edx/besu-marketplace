@@ -41,4 +41,4 @@ metadata:
 data:
   config.toml: |-
 {{ .Files.Get "files/config.toml" | indent 4 }}
-```
+---
