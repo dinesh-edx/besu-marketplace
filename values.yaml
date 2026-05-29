@@ -198,25 +198,6 @@ validatorsList:
     key: validator4.key
 
 # ---------------------------------------------------
-# Secrets
-# ---------------------------------------------------
-secrets:
-
-  enabled: true
-
-  name: besu-network-secret
-
-  keys:
-
-    validator1: validator1.key
-    validator2: validator2.key
-    validator3: validator3.key
-    validator4: validator4.key
-
-    # RPC Node Private Key
-    rpc: rpc.key
-    
-# ---------------------------------------------------
 # Monitoring
 # ---------------------------------------------------
 monitoring:
