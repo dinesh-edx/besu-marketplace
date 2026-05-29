@@ -53,6 +53,11 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 
+      {{- with .Values.rpc.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: topology.kubernetes.io/zone
@@ -86,11 +91,13 @@ spec:
 
             - "--data-path=/data"
 
+            - "--node-private-key-file=/secrets/rpc.key"
+
             - "--rpc-http-enabled=true"
             - "--rpc-http-host=0.0.0.0"
             - "--rpc-http-port=8545"
 
-            - "--rpc-http-api=ETH,NET,WEB3,TXPOOL"
+            - "--rpc-http-api=ADMIN,ETH,NET,WEB3,TXPOOL"
 
             - "--rpc-ws-enabled=true"
             - "--rpc-ws-host=0.0.0.0"
@@ -108,6 +115,8 @@ spec:
             - "--Xdns-update-enabled=true"
 
             - "--version-compatibility-protection=false"
+
+            - "--nat-method=NONE"
 
           ports:
             - containerPort: 30303
@@ -159,6 +168,10 @@ spec:
               readOnly: true
               subPath: static-nodes.json
 
+            - mountPath: /secrets
+              name: rpc-key
+              readOnly: true
+
             - mountPath: /data
               name: besu-data
 
@@ -174,6 +187,13 @@ spec:
         - name: members
           configMap:
             name: besu-rpc-config-toml-configmap
+
+        - name: rpc-key
+          secret:
+            secretName: besu-network-secret
+            items:
+              - key: rpc.key
+                path: rpc.key
 
         - name: besu-data
           emptyDir: {}
